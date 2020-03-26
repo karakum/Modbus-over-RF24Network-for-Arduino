@@ -40,7 +40,7 @@ private:
 
 	void shiftData();
 	void unShiftData();
-	uint8_t validateProxyRequest();
+	uint8_t validateProxyRequest(uint8_t len, uint8_t offset = 0);
 
 };
 

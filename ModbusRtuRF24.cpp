@@ -153,7 +153,7 @@ int8_t ModbusRF24::proxy() {
 	u8id = au8Buffer[ ID ];
 
 	// validate message: CRC, FCT, address and size
-	uint8_t u8exception = validateProxyRequest();
+	uint8_t u8exception = validateProxyRequest(i8state);
 	if (u8exception > 0) {
 		if (u8exception != NO_REPLY) {
 			buildException(u8exception);
@@ -271,12 +271,12 @@ int8_t ModbusRF24::proxy() {
  * @return 0 if OK, EXCEPTION if anything fails
  * @ingroup buffer
  */
-uint8_t ModbusRF24::validateProxyRequest() {
+uint8_t ModbusRF24::validateProxyRequest(uint8_t len, uint8_t offset = 0) {
 	// check message crc vs calculated crc
 	uint16_t u16MsgCRC =
-			((au8Buffer[u8BufferSize - 2] << 8)
-			| au8Buffer[u8BufferSize - 1]); // combine the crc Low & High bytes
-	if (calcCRC(u8BufferSize - 2) != u16MsgCRC) {
+			((au8Buffer[offset + len - 2] << 8)
+			| au8Buffer[offset + len - 1]); // combine the crc Low & High bytes
+	if (calcCRC(len - 2, offset) != u16MsgCRC) {
 		u16errCnt++;
 		return NO_REPLY;
 	}
