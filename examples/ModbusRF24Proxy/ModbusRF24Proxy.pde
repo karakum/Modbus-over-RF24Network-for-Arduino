@@ -49,9 +49,9 @@ void loop() {
     // обработка сообщений
     state = proxy.proxy();
 
-    // если получили пакет без ошибок - зажигаем светодиод на 50 мс 
+    // если получили пакет без ошибок - зажигаем светодиод на 10 мс 
     if (state > 4) {
-        tempus = millis() + 50;
+        tempus = millis() + 10;
         digitalWrite(stlPin, HIGH);
     }
     if (millis() > tempus) digitalWrite(stlPin, LOW);
