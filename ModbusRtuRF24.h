@@ -12,6 +12,22 @@
 #include <RF24Network.h>
 #include <RF24.h>
 
+
+#ifdef DEBUG
+#define PRINTHEX(d,l)  printHex(d,l)
+#if defined(UBRR1H)
+#define PRINT(...)     Serial1.print(__VA_ARGS__)
+#define PRINTLN(...)   Serial1.println(__VA_ARGS__)
+#else
+#define PRINT(...)     Serial.print(__VA_ARGS__)
+#define PRINTLN(...)   Serial.println(__VA_ARGS__)
+#endif
+#else
+#define PRINTHEX(d,l)
+#define PRINT(...)
+#define PRINTLN(...)
+#endif
+
 /**
  * @class ModbusRF24 
  * @brief
@@ -24,6 +40,10 @@ protected:
 	void sendTxBuffer();
 	int8_t getRxBuffer();
 	int getRxBufferAvailable();
+
+#ifdef DEBUG
+    void printHex(unsigned char* data, int len);
+#endif
 
 public:
 	// Slave over RF mode

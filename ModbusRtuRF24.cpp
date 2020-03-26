@@ -18,20 +18,12 @@ ModbusRF24::ModbusRF24(RF24Network& _network, uint8_t _u8serno, uint8_t _u8txenp
 }
 
 #ifdef DEBUG
-void printHex(unsigned char* data, int len) {
+void ModbusRF24::printHex(unsigned char* data, int len) {
 	for (int i = 0; i < len; i++) {
-		Serial.print(data[i], HEX);
-		Serial.print(" ");
+		PRINT(data[i], HEX);
+		PRINT(" ");
 	}
 }
-#if defined(UBRR1H)
-void printHex1(unsigned char* data, int len) {
-	for (int i = 0; i < len; i++) {
-		Serial1.print(data[i], HEX);
-		Serial1.print(" ");
-	}
-}
-#endif
 #endif
 
 void ModbusRF24::shiftData() {
@@ -74,16 +66,15 @@ int8_t ModbusRF24::getRxBuffer() {
 			masterNode = headerRequest.from_node;
 			if (network.read(headerRequest, au8Buffer, MAX_BUFFER) > 0) {
 				unShiftData();
-#ifdef DEBUG
-				printHex(au8Buffer, u8BufferSize);
-				Serial.print(" -> ");
-#endif
+
+				PRINTHEX(au8Buffer, u8BufferSize);
+				PRINT(" -> ");
+
 				if (u8BufferSize >= MAX_BUFFER) bBuffOverflow = true;
 			}
 		} else {
-#ifdef DEBUG
-			Serial.println("repeat");
-#endif
+			PRINTLN("repeat");
+
 			network.read(headerRequest, NULL, 0);
 		}
 	}
@@ -104,18 +95,14 @@ void ModbusRF24::sendTxBuffer() {
 	au8Buffer[ u8BufferSize ] = u16crc & 0x00ff;
 	u8BufferSize++;
 
-#ifdef DEBUG
-	printHex(au8Buffer, u8BufferSize);
-	Serial.println();
-#endif
+	PRINTHEX(au8Buffer, u8BufferSize);
+	PRINTLN();
 
 	shiftData();
 
 	RF24NetworkHeader headerAnswer(masterNode, ser);
 	if (!network.write(headerAnswer, au8Buffer, u8BufferSize + 1)) {
-#ifdef DEBUG
-		Serial.println("fail");
-#endif
+		PRINTLN("fail");
 	}
 	u8BufferSize = 0;
 
@@ -140,16 +127,19 @@ int8_t ModbusRF24::proxy() {
 	}
 	if (millis() < u32time) return 0;
 
+	PRINT("Available: ");
+	PRINTLN(u8current);
+
 	u8lastRec = 0;
 	int8_t i8state = Modbus::getRxBuffer();
 	u8lastError = i8state;
 	if (i8state < 7) return i8state;
-#ifdef DEBUG
-#if defined(UBRR1H)
-	printHex1(au8Buffer, u8BufferSize);
-	Serial1.print(" -> ");
-#endif
-#endif
+
+	PRINTLN(u8BufferSize);
+	PRINTLN(i8state);
+	PRINTHEX(au8Buffer, i8state);
+	PRINT(" -> ");
+
 	u8id = au8Buffer[ ID ];
 
 	// validate message: CRC, FCT, address and size
@@ -160,11 +150,9 @@ int8_t ModbusRF24::proxy() {
 			sendTxBuffer();
 		}
 		u8lastError = u8exception;
-#ifdef DEBUG
-#if defined(UBRR1H)
-		Serial1.println("not valid");
-#endif
-#endif
+
+		PRINTLN("not valid");
+
 		return u8exception;
 	}
 
@@ -174,16 +162,12 @@ int8_t ModbusRF24::proxy() {
 	RF24NetworkHeader headerRequest(u8id, ser);
 
 	shiftData();
-	if (network.write(headerRequest, au8Buffer, u8BufferSize + 1)) {
+	if (network.write(headerRequest, au8Buffer, i8state + 1)) {
 		ser++;
 		if (ser > 'Z') ser = 'A';
 
-#ifdef DEBUG
-#if defined(UBRR1H)
-		Serial1.print((char) headerRequest.type);
-		Serial1.print(":");
-#endif
-#endif
+		PRINT((char) headerRequest.type);
+		PRINT(":");
 
 		while (!network.available()) {
 			network.update();
@@ -192,12 +176,10 @@ int8_t ModbusRF24::proxy() {
 				u8state = COM_IDLE;
 				u8lastError = NO_REPLY;
 				u16errCnt++;
-#ifdef DEBUG
-#if defined(UBRR1H)
-				Serial1.print("timeout:");
-				Serial1.println(u16timeOut);
-#endif
-#endif
+
+				PRINT("timeout:");
+				PRINTLN(u16timeOut);
+
 				return 0;
 			}
 		}
@@ -205,22 +187,18 @@ int8_t ModbusRF24::proxy() {
 		while (network.available()) {
 			RF24NetworkHeader headerAnswer;
 			network.peek(headerAnswer);
-#ifdef DEBUG
-#if defined(UBRR1H)
-			Serial1.print((char) headerAnswer.type);
-			Serial1.print(" ");
-#endif
-#endif
+
+			PRINT((char) headerAnswer.type);
+			PRINT(" ");
+
 			if (headerAnswer.type == headerRequest.type && headerAnswer.from_node == u8id) {
 				size_t r = network.read(headerRequest, au8Buffer, MAX_BUFFER);
 				if (r > 2) {
 					unShiftData();
-#ifdef DEBUG
-#if defined(UBRR1H)
-					printHex1(au8Buffer, u8BufferSize);
-					Serial1.println();
-#endif
-#endif
+
+					PRINTHEX(au8Buffer, u8BufferSize);
+					PRINTLN();
+
 					uint16_t u16MsgCRC =
 							((au8Buffer[u8BufferSize - 2] << 8)
 							| au8Buffer[u8BufferSize - 1]); // combine the crc Low & High bytes
@@ -238,11 +216,8 @@ int8_t ModbusRF24::proxy() {
 				}
 
 			} else {
-#ifdef DEBUG
-#if defined(UBRR1H)
-				Serial1.println(" lost packet");
-#endif
-#endif
+				PRINTLN(" lost packet");
+
 				while (network.available()) {
 					network.update();
 					network.read(headerRequest, NULL, 0);
@@ -253,10 +228,8 @@ int8_t ModbusRF24::proxy() {
 		}
 
 #ifdef DEBUG
-#if defined(UBRR1H)
 	} else {
-		Serial1.println("send error");
-#endif
+		PRINTLN("send error");
 #endif
 	}
 
